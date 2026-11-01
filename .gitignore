@@ -33,3 +33,12 @@ google-services.json
 *.hprof
 node_modules
 node_modules
+
+# Файли планів синхронізуються через Syncthing, а не через git
+/PLAN.md
+/DECISIONS.md
+/PROGRESS.md
+# Службові файли Syncthing
+/.stfolder
+/.stignore
+/.stversions
