@@ -42,3 +42,9 @@ node_modules
 /.stfolder
 /.stignore
 /.stversions
+
+# macOS
+.DS_Store
+
+# Expo
+.expo/

@@ -1,23 +1,15 @@
 {
   "name": "couplespark",
   "version": "1.0.0",
-  "main": "expo/AppEntry.js",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
-  },
-  "dependencies": {
-    "expo": "~51.0.28",
-    "expo-status-bar": "~1.12.1",
-    "react": "18.2.0",
-    "react-native": "0.74.5"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.20.0",
-    "@types/react": "~18.2.45",
-    "typescript": "~5.3.3"
-  },
-  "private": true
+    "start": "npm run start --workspace @couplespark/mobile",
+    "android": "npm run android --workspace @couplespark/mobile",
+    "ios": "npm run ios --workspace @couplespark/mobile",
+    "lint": "npm run lint --workspace @couplespark/mobile"
+  }
 }
