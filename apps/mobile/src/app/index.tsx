@@ -1,98 +1,96 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useState } from 'react';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { DeckTabs } from '@/components/deck-tabs';
+import { FloatingTabBar, TAB_BAR_HEIGHT } from '@/components/floating-tab-bar';
+import { GlassScreen } from '@/components/glass-background';
+import { NextButton } from '@/components/next-button';
+import { ScreenHeader } from '@/components/screen-header';
+import { SwipeDeck, useSwipeDeck } from '@/components/swipe-deck';
+import { DECKS, getDeck, type DeckId } from '@/data/decks';
+import { useTheme } from '@/theme/theme-context';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+export default function CardsScreen() {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+
+  const [deckId, setDeckId] = useState<DeckId>('regular');
+  const [indices, setIndices] = useState<Record<DeckId, number>>({
+    regular: 0,
+    intimate: 0,
+    mixed: 0,
+  });
+
+  const deck = getDeck(deckId);
+  const index = indices[deckId];
+
+  const onAdvance = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIndices((prev) => ({
+      ...prev,
+      [deckId]: (prev[deckId] + 1) % deck.questions.length,
+    }));
+  };
+
+  const { tx, pan, advance, reset } = useSwipeDeck(onAdvance);
+
+  const selectDeck = (id: DeckId) => {
+    if (id === deckId) return;
+    reset();
+    setDeckId(id);
+  };
+
+  const cardWidth = Math.min(width * 0.78, 340);
+  const cardHeight = Math.min(Math.max(height * 0.47, 340), 480);
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+    <GlassScreen>
+      <StatusBar style={colors.mode === 'dark' ? 'light' : 'dark'} />
+      <View
+        style={[
+          styles.content,
+          { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 + TAB_BAR_HEIGHT + 12 },
+        ]}>
+        <ScreenHeader onMenu={() => router.push('/menu')} />
+        <DeckTabs decks={DECKS} selected={deckId} onSelect={selectDeck} />
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
+        <View style={styles.stage}>
+          <SwipeDeck
+            deck={deck}
+            index={index}
+            tx={tx}
+            pan={pan}
+            cardWidth={cardWidth}
+            cardHeight={cardHeight}
           />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+        </View>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+        <View style={styles.buttonRow}>
+          <NextButton tx={tx} onPress={advance} />
+        </View>
+      </View>
+      <FloatingTabBar active="cards" />
+    </GlassScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  content: {
+    flex: 1,
+    gap: 12,
+  },
+  stage: {
     flex: 1,
     justifyContent: 'center',
-    flexDirection: 'row',
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
+  buttonRow: {
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
+    height: 92,
     justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
   },
 });
