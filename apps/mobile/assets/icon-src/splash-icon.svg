@@ -1,0 +1,9 @@
+<!-- Splash screen mark: pink heart + gold sparkle on a transparent background. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <g transform="translate(248 255) scale(22)">
+    <path fill="#E7829A" d="M12 20.5C5 15.5 3 11.8 3 8.8 3 6.2 5 4.5 7.3 4.5c1.9 0 3.5 1 4.7 2.9 1.2-1.9 2.8-2.9 4.7-2.9C19 4.5 21 6.2 21 8.8c0 3-2 6.7-9 11.7z"/>
+  </g>
+  <g transform="translate(596 256) scale(7)">
+    <path fill="#F2B93B" d="M12 2l2.2 7.3L22 12l-7.8 2.7L12 22l-2.2-7.3L2 12l7.8-2.7z"/>
+  </g>
+</svg>
