@@ -1,84 +1,105 @@
-export type DeckId = 'regular' | 'intimate' | 'mixed';
+import { shuffle } from '@/utils/shuffle';
 
-export type Question = {
-  id: string;
+import intimateJson from './questions/intimate.json';
+import regularJson from './questions/regular.json';
+
+/** Decks that own their questions. */
+export type SourceDeckId = 'regular' | 'intimate';
+/** All decks, including those composed from other decks. */
+export type DeckId = SourceDeckId | 'mixed';
+
+/**
+ * Shape of an entry in `questions/*.json`.
+ * Format mismatches are caught by the type checker (see the `satisfies` checks below).
+ */
+type RawQuestion = {
+  /** Unique within its own file */
+  id: number;
+  /** Not shown in the app for now: the card header already shows the deck */
+  category: string;
   text: string;
 };
 
+export type Question = {
+  /** Globally unique: `${deckId}-${JSON id}`, since numeric ids of different decks collide in `mixed` */
+  id: string;
+  text: string;
+  /** Deck the question comes from: drives the card header. */
+  deckId: SourceDeckId;
+};
+
+/** Deck ready for display: tab label + ordered list of questions. */
 export type Deck = {
   id: DeckId;
-  /** Назва табу */
+  /** Tab label */
   label: string;
-  /** Категорія на картці */
-  category: string;
-  /** Підказка під питанням */
-  hint: string;
   questions: Question[];
 };
 
-const q = (prefix: string, texts: string[]): Question[] =>
-  texts.map((text, i) => ({ id: `${prefix}-${i + 1}`, text }));
+/** Source deck: owns its questions and card styling. */
+export type SourceDeck = Deck & {
+  id: SourceDeckId;
+};
 
-/** Приклади питань. Пізніше замінимо на каталог із Firestore. */
-export const DECKS: Deck[] = [
-  {
-    id: 'regular',
-    label: 'Звичайні',
-    category: 'Про нас',
-    hint: 'Відповідайте по черзі, без поспіху.',
-    questions: q('regular', [
-      'Яка дрібниця в нашому дні дарує тобі найбільше спокою?',
-      'Який наш спільний спогад ти б хотів(ла) прожити ще раз?',
-      'Що нового ти пробував(ла) би разом зі мною, якби не було страху?',
-      'Що я роблю, після чого ти відчуваєш, що тебе люблять?',
-      'Яка пісня для тебе звучить як «ми»?',
-      'Яке місце ти б показав(ла) мені першим?',
-      'Чого ти навчився(лась) про себе за цей рік?',
-      'Який звичайний вечір для тебе ідеальний?',
-      'Про що ти мрієш, але ще нікому не розповідав(ла)?',
-      'Що б ти хотів(ла), щоб ми робили частіше?',
-      'За що ти найбільше вдячний(на) мені цього тижня?',
-      'Яка наша спільна традиція тобі найдорожча?',
-    ]),
-  },
-  {
-    id: 'intimate',
-    label: 'Інтимні',
-    category: 'Близькість',
-    hint: 'Говоріть тихо й щиро.',
-    questions: q('intimate', [
-      'Який мій дотик ти хотів(ла) би відчувати частіше?',
-      'Коли ти відчуваєш найбільшу близькість зі мною?',
-      'Що допомагає тобі розслабитися поруч зі мною?',
-      'Які слова від мене тобі найприємніше чути?',
-      'Який момент тиші між нами був для тебе найтеплішим?',
-      'Що б ти хотів(ла), щоб я краще розумів(ла) у тобі?',
-      'Як ти найбільше любиш прокидатися поруч зі мною?',
-      'Який жест уваги зворушує тебе найбільше?',
-      'Про що ти хотів(ла) би говорити зі мною відвертіше?',
-      'Що для тебе означає почуватися в безпеці зі мною?',
-    ]),
-  },
-  {
-    id: 'mixed',
-    label: 'Змішані',
-    category: 'Сюрприз',
-    hint: 'Можна пофантазувати.',
-    questions: q('mixed', [
-      'Яким ти уявляєш наш ідеальний вихідний через п’ять років?',
-      'Якби ми могли вкрасти один день у календаря, що б ми робили?',
-      'Яка суперсила стала б нам обом у пригоді?',
-      'Куди б ми поїхали, якби нічого не треба було планувати?',
-      'Який маленький ритуал ми могли б завести лише для нас двох?',
-      'Яку страву ми обов’язково маємо приготувати разом?',
-      'Що ти скажеш мені через двадцять років?',
-      'Яка наша кумедна історія тобі найдорожча?',
-      'Який фільм ми можемо передивлятися знову й знову?',
-      'Що б ти подарував(ла) мені без жодного приводу?',
-    ]),
-  },
-];
+/** Composite deck: only references source decks, has no questions of its own. */
+type CompositeDeckDefinition = {
+  id: DeckId;
+  label: string;
+  sources: SourceDeckId[];
+};
+
+function sourceDeck(meta: Omit<SourceDeck, 'questions'>, raw: RawQuestion[]): SourceDeck {
+  return {
+    ...meta,
+    questions: raw.map(({ id, text }) => ({
+      id: `${meta.id}-${id}`,
+      text,
+      deckId: meta.id,
+    })),
+  };
+}
+
+/** Each deck's questions live in `questions/<deckId>.json` and are bundled at build time. */
+const SOURCE_DECKS: Record<SourceDeckId, SourceDeck> = {
+  regular: sourceDeck(
+    { id: 'regular', label: 'Загальні' },
+    regularJson satisfies RawQuestion[],
+  ),
+  intimate: sourceDeck(
+    { id: 'intimate', label: 'Інтимні' },
+    intimateJson satisfies RawQuestion[],
+  ),
+};
+
+const MIXED: CompositeDeckDefinition = {
+  id: 'mixed',
+  label: 'Змішані',
+  sources: ['regular', 'intimate'],
+};
+
+/**
+ * Collects questions from all sources and shuffles them.
+ * Runs once at module load, so the order is new on every app launch
+ * and stable within a session (deck progress is not reset).
+ */
+function resolveComposite(definition: CompositeDeckDefinition): Deck {
+  return {
+    id: definition.id,
+    label: definition.label,
+    questions: shuffle(definition.sources.flatMap((id) => SOURCE_DECKS[id].questions)),
+  };
+}
+
+/** Tab order on screen. */
+export const DECKS: Deck[] = [SOURCE_DECKS.regular, SOURCE_DECKS.intimate, resolveComposite(MIXED)];
+
+const DECKS_BY_ID = Object.fromEntries(DECKS.map((d) => [d.id, d])) as Record<DeckId, Deck>;
 
 export function getDeck(id: DeckId): Deck {
-  return DECKS.find((d) => d.id === id) ?? DECKS[0];
+  return DECKS_BY_ID[id];
+}
+
+/** Card styling for a question: O(1). */
+export function getSourceDeck(id: SourceDeckId): SourceDeck {
+  return SOURCE_DECKS[id];
 }

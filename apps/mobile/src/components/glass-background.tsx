@@ -6,8 +6,8 @@ import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { useTheme } from '@/theme/theme-context';
 
 /**
- * На Android розмиття «скла» працює лише відносно спеціального шару (BlurTargetView).
- * Фон віддає на нього посилання, а скляні панелі використовують його через контекст.
+ * On Android, glass blur only works relative to a dedicated layer (BlurTargetView).
+ * The background exposes a ref to it, and glass panels consume it via context.
  */
 type BlurTargetRef = RefObject<ComponentRef<typeof View> | null>;
 
@@ -17,7 +17,7 @@ function Blobs() {
   const { colors } = useTheme();
   const { width: w, height: h } = useWindowDimensions();
 
-  // Позиції та радіуси плям: м'ята, рожева, лаванда, персик, масло
+  // Blob positions and radii: mint, pink, lavender, peach, butter
   const blobs = [
     { cx: 0.1 * w, cy: 0.12 * h, r: 0.62 * w },
     { cx: 0.98 * w, cy: 0.22 * h, r: 0.55 * w },
@@ -44,7 +44,7 @@ function Blobs() {
   );
 }
 
-/** Екран із матовим розмитим фоном із кольорових плям. */
+/** Screen with a frosted, blurred background of color blobs. */
 export function GlassScreen({ children }: { children: ReactNode }) {
   const { colors } = useTheme();
   const targetRef = useRef<ComponentRef<typeof View>>(null);
@@ -55,7 +55,7 @@ export function GlassScreen({ children }: { children: ReactNode }) {
         <Blobs />
       </BlurTargetView>
 
-      {/* Шар «матового скла» поверх плям. Зернистість поки не додана. */}
+      {/* Frosted glass layer over the blobs. Grain is not added yet. */}
       {Platform.OS === 'ios' ? (
         <BlurView
           pointerEvents="none"

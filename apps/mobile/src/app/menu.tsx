@@ -23,7 +23,7 @@ export default function MenuScreen() {
     <GlassScreen>
       <StatusBar style={colors.mode === 'dark' ? 'light' : 'dark'} />
       <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20 }}>
-        {/* Шапка 64 dp: «Назад», заголовок по центру, праворуч порожній відступ 48 dp */}
+        {/* 64 dp header: "Back", centered title, 48 dp empty spacer on the right */}
         <View style={styles.header}>
           <GlassIconButton icon="back" label="Назад" onPress={() => router.back()} />
           <Text style={[styles.title, { color: colors.text }]}>Меню</Text>

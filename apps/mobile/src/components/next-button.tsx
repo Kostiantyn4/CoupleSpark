@@ -10,7 +10,7 @@ import { SWIPE_THRESHOLD } from './swipe-deck';
 const SIZE = 84;
 const POINTS = 14;
 
-/** Зірка з 14 променями (з м'якими вершинами). */
+/** 14-point star (with soft tips). */
 function starPath(cx: number, cy: number, outer: number, inner: number, points: number): string {
   let d = '';
   for (let i = 0; i < points * 2; i++) {
@@ -28,12 +28,14 @@ const STAR = starPath(SIZE / 2, SIZE / 2, 39, 34.5, POINTS);
 type Props = {
   tx: SharedValue<number>;
   onPress: () => void;
+  /** No next card (empty deck) */
+  disabled?: boolean;
 };
 
-export function NextButton({ tx, onPress }: Props) {
+export function NextButton({ tx, onPress, disabled = false }: Props) {
   const { colors } = useTheme();
 
-  // Під час свайпу кнопка трохи збільшується
+  // The button grows slightly during a swipe
   const scaleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + 0.12 * clamp(Math.abs(tx.get()) / SWIPE_THRESHOLD, 0, 1) }],
   }));
@@ -42,10 +44,12 @@ export function NextButton({ tx, onPress }: Props) {
     <Animated.View style={scaleStyle}>
       <Pressable
         onPress={onPress}
+        disabled={disabled}
         role="button"
+        aria-disabled={disabled}
         accessibilityLabel="Далі"
         android_ripple={{ color: 'rgba(255,255,255,0.35)', borderless: true, radius: SIZE / 2 }}
-        style={styles.pressable}>
+        style={[styles.pressable, disabled && styles.disabled]}>
         <Svg width={SIZE} height={SIZE} style={StyleSheet.absoluteFill}>
           <Path
             d={STAR}
@@ -69,5 +73,8 @@ const styles = StyleSheet.create({
     height: SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  disabled: {
+    opacity: 0.4,
   },
 });

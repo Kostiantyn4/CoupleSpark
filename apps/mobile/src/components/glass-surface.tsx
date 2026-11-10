@@ -8,12 +8,14 @@ import { BlurTargetContext } from './glass-background';
 
 type Props = ViewProps & {
   radius?: number;
-  /** Сила розмиття 1–100 (в дизайні blur 30) */
+  /** Blur strength 1–100 (blur 30 in the design) */
   intensity?: number;
+  /** Translucent layer color over the blur; defaults to the theme's glass color */
+  fill?: string;
 };
 
-/** Скляна панель: розмиття фону + напівпрозорий білий шар + світла обводка. */
-export function GlassSurface({ radius = 24, intensity = 45, style, children, ...rest }: Props) {
+/** Glass panel: background blur + translucent layer + light border. */
+export function GlassSurface({ radius = 24, intensity = 45, fill, style, children, ...rest }: Props) {
   const { colors } = useTheme();
   const blurTarget = useContext(BlurTargetContext);
 
@@ -35,7 +37,7 @@ export function GlassSurface({ radius = 24, intensity = 45, style, children, ...
       />
       <View
         pointerEvents="none"
-        style={[StyleSheet.absoluteFill, { backgroundColor: colors.glass }]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: fill ?? colors.glass }]}
       />
       {children}
     </View>

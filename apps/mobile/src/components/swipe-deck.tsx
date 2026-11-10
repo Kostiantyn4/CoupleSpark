@@ -12,15 +12,15 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import type { Deck } from '@/data/decks';
+import { getSourceDeck, type Deck, type Question } from '@/data/decks';
 import { FontFamily } from '@/theme/tokens';
 import { useTheme } from '@/theme/theme-context';
 
 import { QuestionCard } from './question-card';
 
-/** Відстань у dp, після якої свайп зараховується. */
+/** Distance in dp after which a swipe counts. */
 export const SWIPE_THRESHOLD = 120;
-/** Швидкість у dp/с, після якої зараховується навіть короткий змах. */
+/** Velocity in dp/s after which even a short flick counts. */
 export const SWIPE_VELOCITY = 800;
 
 const MAX_TILT_DEG = 14;
@@ -29,8 +29,8 @@ const RADIUS = 28;
 export type PanGesture = ReturnType<typeof usePanGesture>;
 
 /**
- * Керування колодою. Свайп вправо, вліво і кнопка «Далі» означають одну дію.
- * `tx` ділиться між колодою та кнопкою, щоб кнопка збільшувалась під час свайпу.
+ * Deck controller. Swipe right, swipe left and the "Next" button all trigger the same action.
+ * `tx` is shared between the deck and the button so the button grows during a swipe.
  */
 export function useSwipeDeck(onAdvance: () => void) {
   'use no memo';
@@ -41,13 +41,13 @@ export function useSwipeDeck(onAdvance: () => void) {
   const [version, setVersion] = useState(0);
   const flyDistance = width * 1.3;
 
-  // Виконується в JS-потоці після того, як картка вилетіла за екран.
+  // Runs on the JS thread after the card has flown off screen.
   const commit = () => {
     onAdvance();
     setVersion((v) => v + 1);
   };
 
-  // Нова картка вже відрендерена: повертаємо позицію в нуль без анімації.
+  // The new card is already rendered: reset the position to zero without animation.
   useLayoutEffect(() => {
     tx.set(0);
     busy.set(false);
@@ -95,10 +95,10 @@ export function useSwipeDeck(onAdvance: () => void) {
     },
   });
 
-  /** Для кнопки «Далі»: та сама анімація вильоту вправо. */
+  /** For the "Next" button: the same fly-out-to-the-right animation. */
   const advance = () => flyOut(1, 0);
 
-  /** Скидання при зміні колоди. */
+  /** Reset when the deck changes. */
   const reset = () => {
     tx.set(0);
     busy.set(false);
@@ -127,7 +127,7 @@ export function SwipeDeck({ deck, index, tx, pan, cardWidth, cardHeight }: Props
   const next = deck.questions[(index + 1) % total];
   const previous = index > 0 ? deck.questions[index - 1] : null;
 
-  // Центр сусідньої картки: половина головної + проміжок + половина зменшеної
+  // Neighbor card center: half of the main card + gap + half of the scaled-down card
   const neighborOffset = cardWidth / 2 + 12 + (cardWidth * 0.9) / 2;
   const left = (width - cardWidth) / 2;
 
@@ -137,7 +137,7 @@ export function SwipeDeck({ deck, index, tx, pan, cardWidth, cardHeight }: Props
     return { transform: [{ translateX: x }, { rotate: `${rotation}deg` }] };
   });
 
-  // Наступна картка «піднімається» до центру разом із вильотом поточної
+  // The next card "rises" to the center as the current one flies out
   const nextStyle = useAnimatedStyle(() => {
     const rise = interpolate(
       Math.abs(tx.get()),
@@ -151,7 +151,7 @@ export function SwipeDeck({ deck, index, tx, pan, cardWidth, cardHeight }: Props
     };
   });
 
-  // Ліва сусідка трохи зсувається до центру, коли тягнемо вправо
+  // The left neighbor shifts slightly toward the center while dragging right
   const previousStyle = useAnimatedStyle(() => {
     const toward = clamp(tx.get() / SWIPE_THRESHOLD, 0, 1);
     return { transform: [{ translateX: -neighborOffset + 14 * toward }, { scale: 0.9 }] };
@@ -167,12 +167,13 @@ export function SwipeDeck({ deck, index, tx, pan, cardWidth, cardHeight }: Props
     opacity: clamp(Math.abs(tx.get()) / SWIPE_THRESHOLD, 0, 1),
   }));
 
-  const card = (q: { id: string; text: string }, position: number) => (
+  // Styling comes from the question's source deck, not from the current tab
+  const card = (q: Question, position: number) => (
     <QuestionCard
       width={cardWidth}
       height={cardHeight}
-      category={deck.category}
-      hint={deck.hint}
+      source={getSourceDeck(q.deckId)}
+      questionId={q.id}
       text={q.text}
       position={position}
       total={total}
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
     top: 0,
   },
   current: {
-    // Точка обертання: низ картки
+    // Rotation pivot: bottom of the card
     transformOrigin: '50% 100%',
   },
   glow: {

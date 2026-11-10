@@ -17,7 +17,7 @@ const ITEMS: Item[] = [
   { key: 'mood', label: 'Настрій', icon: 'mood' },
 ];
 
-/** Висота плаваючої панелі разом із відступом від краю, щоб контент не ховався під нею. */
+/** Floating bar height including edge padding, so content isn't hidden beneath it. */
 export const TAB_BAR_HEIGHT = 64;
 
 type Props = {
@@ -25,8 +25,8 @@ type Props = {
 };
 
 /**
- * Плаваюча нижня панель. Активна вкладка розгортається в капсулу з підписом,
- * решта показані лише іконками. Екранів для інших вкладок поки немає.
+ * Floating bottom bar. The active tab expands into a labeled pill,
+ * the rest are icon-only. Screens for the other tabs don't exist yet.
  */
 export function FloatingTabBar({ active = 'cards' }: Props) {
   const { colors } = useTheme();

@@ -6,7 +6,7 @@ import { useTheme } from '@/theme/theme-context';
 import { GlassSurface } from './glass-surface';
 import { Icon, type IconName } from './icons';
 
-/** Круглa скляна кнопка 48 dp. */
+/** Round 48 dp glass button. */
 export function GlassIconButton({
   icon,
   label,
@@ -35,7 +35,7 @@ type Props = {
   onMenu: () => void;
 };
 
-/** Шапка головного екрана: аватар, «TwoGether · Картки розмов», кнопка меню. */
+/** Main screen header: avatar, "CoupleSpark · Conversation cards", menu button. */
 export function ScreenHeader({ onMenu }: Props) {
   const { colors } = useTheme();
 
@@ -48,7 +48,7 @@ export function ScreenHeader({ onMenu }: Props) {
       </GlassSurface>
 
       <Text style={styles.titleWrap} numberOfLines={1}>
-        <Text style={[styles.brand, { color: colors.text }]}>TwoGether</Text>
+        <Text style={[styles.brand, { color: colors.text }]}>CoupleSpark</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{'  ·  Картки розмов'}</Text>
       </Text>
 

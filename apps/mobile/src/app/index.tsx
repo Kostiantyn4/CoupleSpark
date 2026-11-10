@@ -6,6 +6,7 @@ import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DeckTabs } from '@/components/deck-tabs';
+import { EmptyDeck } from '@/components/empty-deck';
 import { FloatingTabBar, TAB_BAR_HEIGHT } from '@/components/floating-tab-bar';
 import { GlassScreen } from '@/components/glass-background';
 import { NextButton } from '@/components/next-button';
@@ -28,8 +29,11 @@ export default function CardsScreen() {
 
   const deck = getDeck(deckId);
   const index = indices[deckId];
+  // Don't render SwipeDeck without questions: the indices and modulo below require length > 0
+  const isEmpty = deck.questions.length === 0;
 
   const onAdvance = () => {
+    if (isEmpty) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIndices((prev) => ({
       ...prev,
@@ -60,18 +64,22 @@ export default function CardsScreen() {
         <DeckTabs decks={DECKS} selected={deckId} onSelect={selectDeck} />
 
         <View style={styles.stage}>
-          <SwipeDeck
-            deck={deck}
-            index={index}
-            tx={tx}
-            pan={pan}
-            cardWidth={cardWidth}
-            cardHeight={cardHeight}
-          />
+          {isEmpty ? (
+            <EmptyDeck width={cardWidth} height={cardHeight} />
+          ) : (
+            <SwipeDeck
+              deck={deck}
+              index={index}
+              tx={tx}
+              pan={pan}
+              cardWidth={cardWidth}
+              cardHeight={cardHeight}
+            />
+          )}
         </View>
 
         <View style={styles.buttonRow}>
-          <NextButton tx={tx} onPress={advance} />
+          <NextButton tx={tx} onPress={advance} disabled={isEmpty} />
         </View>
       </View>
       <FloatingTabBar active="cards" />

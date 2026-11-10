@@ -1,53 +1,76 @@
+import { BlurTargetView } from 'expo-blur';
+import { useRef, type ComponentRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
+import type { SourceDeck } from '@/data/decks';
+import { LINE_HEIGHT_RATIO, useFittedFontSize } from '@/hooks/use-fitted-font-size';
 import { FontFamily } from '@/theme/tokens';
 import { useTheme } from '@/theme/theme-context';
 
 import { CardIllustration } from './card-illustration';
+import { BlurTargetContext } from './glass-background';
 import { GlassSurface } from './glass-surface';
 import { Icon } from './icons';
 
 type Props = {
   width: number;
   height: number;
-  category: string;
-  hint: string;
+  /** Deck the question comes from: drives the header */
+  source: SourceDeck;
+  /** Stable question id: caches the fitted font size */
+  questionId: string;
   text: string;
-  /** Номер питання (з 1) і всього в колоді */
+  /** Question number (1-based) and total in the deck */
   position: number;
   total: number;
 };
 
 const RADIUS = 28;
+const HEADER_HEIGHT = 44;
 
-export function QuestionCard({ width, height, category, hint, text, position, total }: Props) {
+/** Gap between the text panel and the header / card bottom when the panel is at full height */
+const TEXT_AREA_PADDING_V = 16;
+const PANEL_PADDING_V = 20;
+/** GlassSurface border width */
+const PANEL_BORDER = 1;
+
+const MAX_FONT_SIZE = 26;
+const MIN_FONT_SIZE = 14;
+
+export function QuestionCard({ width, height, source, questionId, text, position, total }: Props) {
   const { colors } = useTheme();
+  const header = colors.deckHeader[source.id];
+
+  // The panel grows with the text up to the space below the header; only then does the font shrink.
+  const availableTextHeight =
+    height - HEADER_HEIGHT - 2 * (TEXT_AREA_PADDING_V + PANEL_PADDING_V + PANEL_BORDER);
+  const { fontSize, isFitted, onTextLayout } = useFittedFontSize({
+    cacheKey: `${questionId}:${width}x${height}`,
+    maxFontSize: MAX_FONT_SIZE,
+    minFontSize: MIN_FONT_SIZE,
+    availableHeight: availableTextHeight,
+  });
+  // Card-local blur target: on Android the text panel must blur this card's
+  // illustration, not the screen background that the outer context points to.
+  const illustrationRef = useRef<ComponentRef<typeof View>>(null);
 
   return (
     <View style={[styles.card, { width, height }]}>
-      <CardIllustration width={width} height={height * 0.62} gradient={colors.illustration} />
+      <BlurTargetView ref={illustrationRef} style={StyleSheet.absoluteFill}>
+        <CardIllustration width={width} height={height} gradient={colors.illustration} />
+      </BlurTargetView>
 
-      {/* Темний скрим під текст: контраст білого тексту понад 6:1 */}
-      <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
-        <Defs>
-          <LinearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0.28" stopColor="#1B0E22" stopOpacity={0} />
-            <Stop offset="0.62" stopColor="#1B0E22" stopOpacity={0.78} />
-            <Stop offset="1" stopColor="#1B0E22" stopOpacity={0.94} />
-          </LinearGradient>
-        </Defs>
-        <Rect x={0} y={0} width={width} height={height} fill="url(#scrim)" />
-      </Svg>
-
-      {/* Лічильник */}
-      <GlassSurface radius={16} style={styles.counter}>
-        <Text style={styles.counterText}>
+      {/* Header: source deck of the question and counter */}
+      <View style={[styles.header, { backgroundColor: header.bg }]}>
+        <Text style={[styles.headerText, { color: header.text }]} numberOfLines={1}>
+          {source.label}
+        </Text>
+        <Text style={[styles.headerText, { color: header.text }]}>
           {position} / {total}
         </Text>
-      </GlassSurface>
+      </View>
 
-      {/* Стікери на краях картки */}
+      {/* Stickers on the card edges */}
       <View style={[styles.sticker, styles.stickerHeart]}>
         <Icon name="heart" size={22} color="#FF6F96" />
       </View>
@@ -55,14 +78,28 @@ export function QuestionCard({ width, height, category, hint, text, position, to
         <Icon name="sparkle" size={22} color="#F2B93B" />
       </View>
 
-      <View style={styles.textBlock}>
-        <View style={styles.categoryPill}>
-          <Text style={styles.categoryText}>{category}</Text>
-        </View>
-        <Text style={styles.question} numberOfLines={5}>
-          {text}
-        </Text>
-        <Text style={styles.hint}>{hint}</Text>
+      {/* Question on a themed frosted-glass panel, centered below the header */}
+      <View style={styles.textArea} pointerEvents="none">
+        <BlurTargetContext.Provider value={illustrationRef}>
+          {/* Hidden until the font size is fitted, so oversized text never flashes */}
+          <GlassSurface
+            radius={22}
+            fill={colors.cardGlass}
+            style={[styles.textPanel, !isFitted && styles.hidden]}>
+            <Text
+              onTextLayout={onTextLayout}
+              style={[
+                styles.question,
+                {
+                  color: colors.text,
+                  fontSize,
+                  lineHeight: Math.round(fontSize * LINE_HEIGHT_RATIO),
+                },
+              ]}>
+              {text}
+            </Text>
+          </GlassSurface>
+        </BlurTargetContext.Provider>
       </View>
     </View>
   );
@@ -74,17 +111,22 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#2A1630',
   },
-  counter: {
+  header: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: HEADER_HEIGHT,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  counterText: {
-    color: '#FFFFFF',
+  headerText: {
     fontFamily: FontFamily.uiHeavy,
-    fontSize: 13,
+    fontSize: 14,
+    letterSpacing: 0.4,
   },
   sticker: {
     position: 'absolute',
@@ -95,37 +137,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stickerHeart: { top: 14, left: 14, transform: [{ rotate: '-12deg' }] },
+  // Below the header so it doesn't cover the deck name
+  stickerHeart: { top: HEADER_HEIGHT + 12, left: 14, transform: [{ rotate: '-12deg' }] },
   stickerSpark: { top: '34%', right: -6, transform: [{ rotate: '10deg' }] },
-  textBlock: {
+  textArea: {
     position: 'absolute',
-    left: 22,
-    right: 22,
-    bottom: 22,
-    gap: 10,
+    top: HEADER_HEIGHT,
+    left: 18,
+    right: 18,
+    bottom: 0,
+    paddingVertical: TEXT_AREA_PADDING_V,
+    justifyContent: 'center',
   },
-  categoryPill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+  textPanel: {
+    paddingHorizontal: 18,
+    paddingVertical: PANEL_PADDING_V,
   },
-  categoryText: {
-    color: '#FFFFFF',
-    fontFamily: FontFamily.uiHeavy,
-    fontSize: 12,
-    letterSpacing: 0.4,
+  hidden: {
+    opacity: 0,
   },
   question: {
-    color: '#FFFFFF',
     fontFamily: FontFamily.uiHeavy,
-    fontSize: 26,
-    lineHeight: 32,
-  },
-  hint: {
-    color: 'rgba(255,255,255,0.78)',
-    fontFamily: FontFamily.ui,
-    fontSize: 14,
+    textAlign: 'center',
   },
 });

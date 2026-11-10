@@ -12,8 +12,8 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 /**
- * Початкова тема береться із системної; після вибору в меню діє вибір користувача.
- * Поки що вибір живе лише в памʼяті (не зберігається між запусками).
+ * The initial theme follows the system; once picked in the menu, the user's choice wins.
+ * For now the choice lives in memory only (not persisted across launches).
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const system = useColorScheme();
